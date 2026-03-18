@@ -5,257 +5,388 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SatSolar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
-        /* ============================================================
-           DESIGN TOKENS — change these to restyle the whole app
-        ============================================================ */
         :root {
-            --color-bg:         #ffffff;
-            --color-surface:    #f5f5f5;
-            --color-border:     #e0e0e0;
-            --color-text:       #111111;
-            --color-muted:      #888888;
-            --color-accent:     #111111;
-            --color-accent-fg:  #ffffff;
-            --color-good:       #1a6e3c;
-            --color-good-bg:    #f0faf4;
-            --color-warn:       #7a3a00;
-            --color-warn-bg:    #fff8f0;
-            --radius-sm:        8px;
-            --radius-md:        12px;
-            --radius-lg:        18px;
-            --font:             'Segoe UI', system-ui, sans-serif;
-            --panel-width:      320px;
+            --bg:        #ffffff;
+            --surface:   #f7f7f7;
+            --border:    #e8e8e8;
+            --text:      #111111;
+            --muted:     #888888;
+            --accent:    #111111;
+            --accent-fg: #ffffff;
+            --good:      #1a6e3c;
+            --good-bg:   #f0faf4;
+            --warn:      #7a3a00;
+            --warn-bg:   #fff8f0;
+            --r-sm:      8px;
+            --r-md:      12px;
+            --r-lg:      20px;
+            --font:      'Inter', system-ui, sans-serif;
+            --panel-w:   336px;
+            --max-w:     880px;
         }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+        a { text-decoration: none; color: inherit; }
 
-        /* ============================================================
-           RESET & BASE
-        ============================================================ */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: var(--font); background: var(--color-bg); color: var(--color-text); }
+        /* ── NAV ── */
+        nav {
+            position: fixed; inset: 0 0 auto 0; height: 60px;
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 48px; z-index: 3000;
+        }
+        .nav-logo { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.025em; }
+        .nav-right { display: flex; align-items: center; gap: 0; }
+        .nav-by {
+            font-size: 0.72rem; color: var(--muted);
+            padding-right: 20px; border-right: 1px solid var(--border);
+        }
+        .nav-by a { font-weight: 600; color: var(--text); }
+        .nav-by a:hover { text-decoration: underline; }
+        .nav-links { display: flex; align-items: center; gap: 4px; padding-left: 20px; }
+        .nav-links a {
+            font-size: 0.8rem; font-weight: 500; color: var(--muted);
+            padding: 6px 12px; border-radius: var(--r-sm);
+            transition: color 0.15s, background 0.15s;
+        }
+        .nav-links a:hover { color: var(--text); background: var(--surface); }
+        .nav-cta {
+            background: var(--accent) !important; color: var(--accent-fg) !important;
+            font-weight: 600 !important; transition: opacity 0.15s !important;
+        }
+        .nav-cta:hover { opacity: 0.78 !important; background: var(--accent) !important; }
 
-        /* ============================================================
-           MAP
-        ============================================================ */
-        #map { height: 100vh; width: 100%; }
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            padding: 120px 24px 96px; border-bottom: 1px solid var(--border);
+        }
+        .hero-by {
+            display: inline-flex; align-items: center; gap: 8px; margin-bottom: 28px;
+        }
+        .hero-by-name { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em; }
+        .hero-by-sep { color: var(--border); }
+        .hero-by-company { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+        .hero-by-company a { color: var(--muted); transition: color 0.15s; }
+        .hero-by-company a:hover { color: var(--text); }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--muted);
+            border: 1px solid var(--border); padding: 6px 14px;
+            border-radius: 100px; margin-bottom: 40px;
+        }
+        .badge-dot { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; }
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 3.75rem); font-weight: 700;
+            letter-spacing: -0.04em; line-height: 1.1;
+            max-width: 680px; margin-bottom: 24px;
+        }
+        .hero h1 em { font-style: normal; color: var(--muted); }
+        .hero-desc {
+            font-size: 1rem; color: var(--muted); max-width: 400px;
+            line-height: 1.75; margin-bottom: 44px;
+        }
+        .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+        .btn-dark {
+            background: var(--accent); color: var(--accent-fg);
+            padding: 12px 24px; border-radius: var(--r-sm);
+            font-size: 0.85rem; font-weight: 600; transition: opacity 0.15s;
+        }
+        .btn-dark:hover { opacity: 0.75; }
+        .btn-ghost {
+            background: transparent; color: var(--muted);
+            padding: 12px 24px; border-radius: var(--r-sm);
+            border: 1px solid var(--border); font-size: 0.85rem; font-weight: 500;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        .btn-ghost:hover { border-color: #bbb; color: var(--text); }
+        .hero-note { font-size: 0.7rem; color: var(--muted); }
 
-        /* ============================================================
-           PANEL
-        ============================================================ */
+        /* ── STATS ── */
+        .stats {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
+        }
+        .stat { background: var(--bg); padding: 40px 32px; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; }
+        .stat-label { font-size: 0.73rem; color: var(--muted); margin-top: 8px; line-height: 1.55; }
+
+        /* ── SECTIONS ── */
+        .section { max-width: var(--max-w); margin: 0 auto; padding: 88px 24px; }
+        .section-border { border-top: 1px solid var(--border); }
+        .section-tag { font-size: 0.67rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 20px; }
+        .section h2 { font-size: clamp(1.4rem, 2.8vw, 1.9rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.25; max-width: 520px; margin-bottom: 20px; }
+        .section > p { font-size: 0.9rem; color: var(--muted); max-width: 520px; line-height: 1.85; }
+
+        /* ── BUILDER CARDS ── */
+        .two-col-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 1px; background: var(--border);
+            border: 1px solid var(--border); border-radius: var(--r-lg);
+            overflow: hidden; margin-top: 44px;
+        }
+        .info-card { background: var(--bg); padding: 32px 28px; }
+        .info-card-title { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+        .info-card-sub { font-size: 0.72rem; color: var(--muted); font-weight: 500; margin-bottom: 16px; line-height: 1.6; }
+        .info-card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.8; }
+        .info-card-link {
+            display: inline-block; margin-top: 18px;
+            font-size: 0.75rem; font-weight: 600; color: var(--text);
+            border-bottom: 1px solid var(--border); padding-bottom: 2px;
+            transition: border-color 0.15s;
+        }
+        .info-card-link:hover { border-color: var(--text); }
+
+        /* ── FEATURES ── */
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1px; background: var(--border);
+            border: 1px solid var(--border); border-radius: var(--r-lg);
+            overflow: hidden; margin-top: 44px;
+        }
+        .feature-card { background: var(--bg); padding: 28px 26px; }
+        .feature-title { font-size: 0.87rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; }
+        .feature-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.75; }
+
+        /* ── NASA STRIP ── */
+        .nasa-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .nasa-strip-inner { max-width: var(--max-w); margin: 0 auto; padding: 56px 24px; display: flex; align-items: flex-start; gap: 48px; }
+        .nasa-badge { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 18px 22px; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); text-align: center; line-height: 1.7; }
+        .nasa-content h3 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+        .nasa-content p { font-size: 0.83rem; color: var(--muted); line-height: 1.85; max-width: 560px; }
+
+        /* ── APP ── */
+        #app { position: relative; height: 100vh; border-top: 1px solid var(--border); }
+        #map { position: absolute; inset: 0; z-index: 1; }
+
+        /* ── PANEL ── */
         .panel {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: var(--panel-width);
-            max-height: 92vh;
-            overflow-y: auto;
-            background: var(--color-bg);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-            z-index: 1000;
+            position: absolute; top: 24px; right: 24px;
+            width: var(--panel-w); max-height: calc(100vh - 48px);
+            overflow-y: auto; background: var(--bg);
+            border: 1px solid var(--border); border-radius: var(--r-lg);
+            padding: 28px; box-shadow: 0 4px 40px rgba(0,0,0,0.07); z-index: 1000;
         }
-        .panel::-webkit-scrollbar { width: 4px; }
-        .panel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
-
-        /* ============================================================
-           TYPOGRAPHY
-        ============================================================ */
-        .panel-title    { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
-        .panel-subtitle { font-size: 0.78rem; color: var(--color-muted); margin-top: 2px; margin-bottom: 20px; }
-        .section-label  { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 10px; }
-
-        /* ============================================================
-           DIVIDER
-        ============================================================ */
-        .divider { height: 1px; background: var(--color-border); margin: 18px 0; }
-
-        /* ============================================================
-           LOCATION CHIP
-        ============================================================ */
-        #coords {
-            font-size: 0.8rem;
-            color: var(--color-muted);
-            background: var(--color-surface);
-            padding: 8px 12px;
-            border-radius: var(--radius-sm);
-            margin-bottom: 16px;
-        }
-
-        /* ============================================================
-           FORM INPUTS
-        ============================================================ */
+        .panel::-webkit-scrollbar { width: 3px; }
+        .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .panel-title { font-size: 0.93rem; font-weight: 700; letter-spacing: -0.02em; }
+        .panel-sub { font-size: 0.74rem; color: var(--muted); margin-top: 4px; margin-bottom: 22px; line-height: 1.6; }
+        .divider { height: 1px; background: var(--border); margin: 20px 0; }
+        .result-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 12px; }
+        #coords { font-size: 0.77rem; font-weight: 500; color: var(--muted); background: var(--surface); padding: 10px 14px; border-radius: var(--r-sm); margin-bottom: 18px; }
         .field { margin-bottom: 14px; }
-        .field label { font-size: 0.75rem; color: var(--color-muted); display: block; margin-bottom: 4px; }
-        .field input {
-            width: 100%;
-            padding: 9px 12px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-sm);
-            font-size: 0.88rem;
-            color: var(--color-text);
-            background: var(--color-bg);
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .field input:focus { border-color: var(--color-accent); }
-
-        /* ============================================================
-           BUTTON
-        ============================================================ */
-        .btn-primary {
-            width: 100%;
-            padding: 11px;
-            background: var(--color-accent);
-            color: var(--color-accent-fg);
-            border: none;
-            border-radius: var(--radius-sm);
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .btn-primary:hover { opacity: 0.85; }
-
-        /* ============================================================
-           STATUS MESSAGES
-        ============================================================ */
-        .msg { font-size: 0.78rem; margin-top: 12px; }
-        #loading { display: none; color: var(--color-muted); }
+        .field label { font-size: 0.71rem; font-weight: 500; color: var(--muted); display: block; margin-bottom: 6px; }
+        .field input { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 0.86rem; font-family: var(--font); color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; }
+        .field input:focus { border-color: #aaa; }
+        .btn-predict { width: 100%; padding: 12px; background: var(--accent); color: var(--accent-fg); border: none; border-radius: var(--r-sm); font-size: 0.86rem; font-family: var(--font); font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+        .btn-predict:hover { opacity: 0.75; }
+        .msg { font-size: 0.75rem; margin-top: 13px; line-height: 1.6; }
+        #loading { display: none; color: var(--muted); }
         #error   { display: none; color: #c0392b; }
-
-        /* ============================================================
-           RESULTS
-        ============================================================ */
-        #result { display: none; }
-
-        /* Rating */
-        .rating-box {
-            background: var(--color-surface);
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            margin-bottom: 10px;
-        }
-        .rating-value  { font-size: 1rem; font-weight: 700; color: var(--color-text); }
-        .rating-detail { font-size: 0.72rem; color: var(--color-muted); margin-top: 2px; }
-
-        /* Metric cards */
+        #result  { display: none; }
+        .rating-box { background: var(--surface); border-radius: var(--r-md); padding: 15px 17px; margin-bottom: 10px; }
+        .rating-value { font-size: 0.97rem; font-weight: 700; letter-spacing: -0.01em; }
+        .rating-detail { font-size: 0.69rem; color: var(--muted); margin-top: 3px; }
         .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .card  { background: var(--color-surface); border-radius: var(--radius-md); padding: 12px; }
-        .card .value { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
-        .card .label { font-size: 0.68rem; color: var(--color-muted); margin-top: 3px; }
+        .card { background: var(--surface); border-radius: var(--r-md); padding: 13px 15px; }
+        .card .value { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+        .card .label { font-size: 0.66rem; font-weight: 500; color: var(--muted); margin-top: 3px; }
+        .savings-box { background: var(--surface); border-radius: var(--r-md); padding: 15px 17px; margin-bottom: 10px; }
+        .savings-amount { font-size: 1.28rem; font-weight: 700; letter-spacing: -0.02em; }
+        .savings-label { font-size: 0.68rem; color: var(--muted); margin-top: 4px; line-height: 1.55; }
+        .advice-box { border-radius: var(--r-md); padding: 13px 15px; font-size: 0.78rem; font-weight: 500; line-height: 1.7; }
+        .advice-good { background: var(--good-bg); color: var(--good); }
+        .advice-warn { background: var(--warn-bg); color: var(--warn); }
+        .panel-footer { font-size: 0.63rem; color: var(--muted); text-align: center; margin-top: 20px; }
 
-        /* Savings */
-        .savings-box {
-            background: var(--color-surface);
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            margin-bottom: 10px;
-        }
-        .savings-amount { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
-        .savings-label  { font-size: 0.72rem; color: var(--color-muted); margin-top: 2px; }
-
-        /* Advice */
-        .advice-box {
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            font-size: 0.8rem;
-            line-height: 1.6;
-        }
-        .advice-good { background: var(--color-good-bg); color: var(--color-good); }
-        .advice-warn { background: var(--color-warn-bg); color: var(--color-warn); }
-
-        /* Footer */
-        .footer { font-size: 0.68rem; color: var(--color-muted); text-align: center; margin-top: 20px; }
+        /* ── SITE FOOTER ── */
+        .site-footer { border-top: 1px solid var(--border); padding: 40px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+        .footer-left { display: flex; flex-direction: column; gap: 6px; }
+        .footer-logo { font-size: 0.88rem; font-weight: 700; letter-spacing: -0.01em; }
+        .footer-sub { font-size: 0.71rem; color: var(--muted); }
+        .footer-sub a { color: var(--text); font-weight: 600; }
+        .footer-sub a:hover { text-decoration: underline; }
+        .footer-links { display: flex; gap: 20px; }
+        .footer-links a { font-size: 0.74rem; font-weight: 500; color: var(--muted); transition: color 0.15s; }
+        .footer-links a:hover { color: var(--text); }
     </style>
 </head>
 <body>
 
-<div id="map"></div>
-
-<div class="panel">
-
-    <!-- Header -->
-    <div class="panel-title">SatSolar</div>
-    <div class="panel-subtitle">Click on the map to select a location</div>
-
-    <!-- Location -->
-    <div id="coords">No location selected</div>
-
-    <!-- Inputs -->
-    <div class="field">
-        <label>Hour of day (0 = midnight, 12 = noon)</label>
-        <input type="number" id="hour" min="0" max="23" value="12"/>
-    </div>
-
-    <div class="field">
-        <label>Ambient temperature (°C)</label>
-        <input type="number" id="temperature" value="30"/>
-    </div>
-
-    <button class="btn-primary" onclick="getPrediction()">Predict Solar Output</button>
-
-    <div class="msg" id="loading">Fetching satellite data and running model...</div>
-    <div class="msg" id="error"></div>
-
-    <!-- Results -->
-    <div id="result">
-        <div class="divider"></div>
-        <div class="section-label">Results</div>
-
-        <!-- Rating -->
-        <div class="rating-box">
-            <div class="rating-value" id="rating-text"></div>
-            <div class="rating-detail">Solar potential at selected location</div>
+<!-- NAV -->
+<nav>
+    <a class="nav-logo" href="#">SatSolar</a>
+    <div class="nav-right">
+        <div class="nav-by">
+            by <a href="https://www.symbianslab.com" target="_blank"></a> · SymbiansLab
         </div>
-
-        <!-- Metric Cards -->
-        <div class="cards">
-            <div class="card">
-                <div class="value" id="irradiance"></div>
-                <div class="label">Irradiance (W/m²)</div>
-            </div>
-            <div class="card">
-                <div class="value" id="peak_power"></div>
-                <div class="label">Peak Power (kW)</div>
-            </div>
-            <div class="card">
-                <div class="value" id="daily_kwh"></div>
-                <div class="label">Daily Energy (kWh)</div>
-            </div>
-            <div class="card">
-                <div class="value" id="monthly_kwh"></div>
-                <div class="label">Monthly Energy (kWh)</div>
-            </div>
-        </div>
-
-        <!-- Savings -->
-        <div class="savings-box">
-            <div class="savings-amount" id="savings"></div>
-            <div class="savings-label">Estimated monthly bill savings — 5 kW rooftop system</div>
-        </div>
-
-        <!-- Advice -->
-        <div class="advice-box" id="advice-box">
-            <span id="advice-text"></span>
+        <div class="nav-links">
+            <a href="#about">About</a>
+            <a href="#builder">Builder</a>
+            <a href="#features">Features</a>
+            <a href="#app" class="nav-cta">Get Stated!</a>
         </div>
     </div>
+</nav>
 
-    <div class="footer">Powered by NASA POWER satellite data</div>
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-by">
+        <span class="hero-by-name"></span>
+        <span class="hero-by-sep">·</span>
+        <span class="hero-by-company">
+            <a href="https://www.symbianslab.com" target="_blank">SymbiansLab</a>
+        </span>
+    </div>
+    <div class="hero-badge">
+        <div class="badge-dot"></div>
+        Powered by NASA POWER Satellite Data
+    </div>
+    <h1>Know your solar potential <em>before you invest</em></h1>
+    <p class="hero-desc">Click any location on the map. Get instant solar irradiance predictions, energy estimates, and savings using real satellite data.</p>
+    <div class="hero-actions">
+        <a href="#app" class="btn-dark">Try SatSolar</a>
+        <a href="#about" class="btn-ghost">Learn more</a>
+    </div>
+    <div class="hero-note">Free to use. No account required.</div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+    <div class="stat">
+        <div class="stat-value">3 yrs</div>
+        <div class="stat-label">Hourly satellite data<br>used for training</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">Global</div>
+        <div class="stat-label">Works for any location<br>on Earth</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">5 kW</div>
+        <div class="stat-label">Standard rooftop system<br>used for estimates</div>
+    </div>
 </div>
 
-<script>
-    /* ============================================================
-       CONFIG — change API URL here if backend changes
-    ============================================================ */
-    const API = "https://satsolar.onrender.com";
+<!-- ABOUT -->
+<div id="about" class="section">
+    <div class="section-tag">About</div>
+    <h2>What is SatSolar?</h2>
+    <p>SatSolar is a solar energy prediction tool built for homeowners, students, and researchers. Select any location, enter the time of day and temperature, and instantly see solar irradiance, energy output, and potential monthly savings — powered by a machine learning model trained on NASA satellite data.</p>
+</div>
 
-    /* ============================================================
-       MAP SETUP
-    ============================================================ */
+
+
+<!-- FEATURES -->
+<div id="features" class="section section-border">
+    <div class="section-tag">Features</div>
+    <h2>Everything you need to evaluate solar energy</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-title">Interactive Map</div>
+            <div class="feature-desc">Click anywhere on the globe to instantly select a location. No address or coordinates needed.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-title">ML Prediction</div>
+            <div class="feature-desc">A Random Forest model trained on 3 years of hourly NASA satellite data delivers accurate irradiance estimates.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-title">Energy Output</div>
+            <div class="feature-desc">Get peak power, daily and monthly energy generation estimates for a standard 5 kW rooftop system.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-title">Bill Savings</div>
+            <div class="feature-desc">See how much you could save monthly on electricity bills based on your location's solar potential.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-title">Smart Advice</div>
+            <div class="feature-desc">Get a plain-language recommendation on whether your location is suitable for solar installation.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-title">Global Coverage</div>
+            <div class="feature-desc">Works for any location on Earth covered by the NASA POWER satellite dataset.</div>
+        </div>
+    </div>
+</div>
+
+<!-- NASA STRIP -->
+<div class="nasa-strip">
+    <div class="nasa-strip-inner">
+        <div class="nasa-badge">NASA<br>POWER<br>Data</div>
+        <div class="nasa-content">
+            <h3>Backed by real satellite data</h3>
+            <p>SatSolar uses the NASA POWER API — a publicly available dataset of hourly solar irradiance and meteorological readings collected from satellites. The prediction model is trained on 3 years of historical data specific to any selected location, giving results grounded in real-world measurements rather than estimates.</p>
+        </div>
+    </div>
+</div>
+
+<!-- APP -->
+<section id="app">
+    <div id="map"></div>
+    <div class="panel">
+        <div class="panel-title">SatSolar</div>
+        <div class="panel-sub">Click anywhere on the map to select a location.</div>
+        <div id="coords">No location selected</div>
+        <div class="field">
+            <label>Hour of day (0 = midnight, 12 = noon)</label>
+            <input type="number" id="hour" min="0" max="23" value="12"/>
+        </div>
+        <div class="field">
+            <label>Ambient temperature (°C)</label>
+            <input type="number" id="temperature" value="30"/>
+        </div>
+        <button class="btn-predict" onclick="getPrediction()">Predict Solar Output</button>
+        <div class="msg" id="loading">Fetching satellite data and running model. This may take a minute...</div>
+        <div class="msg" id="error"></div>
+        <div id="result">
+            <div class="divider"></div>
+            <div class="result-label">Results</div>
+            <div class="rating-box">
+                <div class="rating-value" id="rating-text"></div>
+                <div class="rating-detail">Solar potential at selected location</div>
+            </div>
+            <div class="cards">
+                <div class="card"><div class="value" id="irradiance"></div><div class="label">Irradiance (W/m²)</div></div>
+                <div class="card"><div class="value" id="peak_power"></div><div class="label">Peak Power (kW)</div></div>
+                <div class="card"><div class="value" id="daily_kwh"></div><div class="label">Daily Energy (kWh)</div></div>
+                <div class="card"><div class="value" id="monthly_kwh"></div><div class="label">Monthly Energy (kWh)</div></div>
+            </div>
+            <div class="savings-box">
+                <div class="savings-amount" id="savings"></div>
+                <div class="savings-label">Estimated monthly bill savings — 5 kW rooftop system</div>
+            </div>
+            <div class="advice-box" id="advice-box">
+                <span id="advice-text"></span>
+            </div>
+        </div>
+        <div class="panel-footer">Powered by NASA POWER satellite data</div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+    <div class="footer-left">
+        <div class="footer-logo">SatSolar</div>
+        <div class="footer-sub">
+            A project by <a href="https://www.linkedin.com/in/sudnyeshnehare" target="_blank">Sudnyesh Nehare</a>
+            · <a href="https://www.symbianslab.com" target="_blank">SymbiansLab</a>
+        </div>
+    </div>
+    <div class="footer-links">
+        <a href="https://www.youtube.com/@SymbiansLab" target="_blank">YouTube</a>
+        <a href="https://www.linkedin.com/company/symbianslab/" target="_blank">LinkedIn</a>
+        <a href="mailto:symbianslab@gmail.com">Email</a>
+    </div>
+</footer>
+
+<script>
+    const API = "https://satsolar.onrender.com";
     let selectedLat = null;
     let selectedLng = null;
 
@@ -268,21 +399,16 @@
     map.on('click', function(e) {
         selectedLat = e.latlng.lat.toFixed(4);
         selectedLng = e.latlng.lng.toFixed(4);
-        document.getElementById('coords').textContent =
-            `${selectedLat} N,  ${selectedLng} E`;
+        document.getElementById('coords').textContent = selectedLat + ' N,  ' + selectedLng + ' E';
         if (marker) map.removeLayer(marker);
         marker = L.marker([selectedLat, selectedLng]).addTo(map);
     });
 
-    /* ============================================================
-       PREDICTION
-    ============================================================ */
     async function getPrediction() {
         if (!selectedLat || !selectedLng) {
             alert("Please click on the map to select a location first.");
             return;
         }
-
         const hour        = parseInt(document.getElementById('hour').value);
         const temperature = parseFloat(document.getElementById('temperature').value);
 
@@ -291,8 +417,8 @@
         document.getElementById('error').style.display   = 'none';
 
         try {
-            const res = await fetch(`${API}/predict`, {
-                method:  'POST',
+            const res = await fetch(API + '/predict', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     latitude:    parseFloat(selectedLat),
@@ -301,32 +427,24 @@
                     temperature: temperature
                 })
             });
-
             const d = await res.json();
-
-            /* -- populate results -- */
-            document.getElementById('rating-text').textContent  = d.rating_text + ' (' + d.rating + ' / 5)';
-            document.getElementById('irradiance').textContent   = d.irradiance;
-            document.getElementById('peak_power').textContent   = d.peak_power_kw;
-            document.getElementById('daily_kwh').textContent    = d.daily_kwh;
-            document.getElementById('monthly_kwh').textContent  = d.monthly_kwh;
-            document.getElementById('savings').textContent      = 'Rs. ' + d.monthly_savings.toLocaleString();
-
-            const adviceBox  = document.getElementById('advice-box');
-            const adviceText = document.getElementById('advice-text');
-            adviceText.textContent  = d.advice;
-            adviceBox.className     = 'advice-box ' + (d.should_install ? 'advice-good' : 'advice-warn');
-
+            document.getElementById('rating-text').textContent = d.rating_text + ' (' + d.rating + ' / 5)';
+            document.getElementById('irradiance').textContent  = d.irradiance;
+            document.getElementById('peak_power').textContent  = d.peak_power_kw;
+            document.getElementById('daily_kwh').textContent   = d.daily_kwh;
+            document.getElementById('monthly_kwh').textContent = d.monthly_kwh;
+            document.getElementById('savings').textContent     = 'Rs. ' + d.monthly_savings.toLocaleString();
+            const adviceBox = document.getElementById('advice-box');
+            document.getElementById('advice-text').textContent = d.advice;
+            adviceBox.className = 'advice-box ' + (d.should_install ? 'advice-good' : 'advice-warn');
             document.getElementById('result').style.display = 'block';
-
         } catch (err) {
-            document.getElementById('error').style.display  = 'block';
-            document.getElementById('error').textContent    = 'Request failed. Please try again.';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent   = 'Request failed. Please try again.';
         } finally {
             document.getElementById('loading').style.display = 'none';
         }
     }
 </script>
-
 </body>
 </html>
