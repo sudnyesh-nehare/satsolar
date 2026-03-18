@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SatSolar</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* ============================================================
+           DESIGN TOKENS — change these to restyle the whole app
+        ============================================================ */
+        :root {
+            --color-bg:         #ffffff;
+            --color-surface:    #f5f5f5;
+            --color-border:     #e0e0e0;
+            --color-text:       #111111;
+            --color-muted:      #888888;
+            --color-accent:     #111111;
+            --color-accent-fg:  #ffffff;
+            --color-good:       #1a6e3c;
+            --color-good-bg:    #f0faf4;
+            --color-warn:       #7a3a00;
+            --color-warn-bg:    #fff8f0;
+            --radius-sm:        8px;
+            --radius-md:        12px;
+            --radius-lg:        18px;
+            --font:             'Segoe UI', system-ui, sans-serif;
+            --panel-width:      320px;
+        }
+
+        /* ============================================================
+           RESET & BASE
+        ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--color-bg); color: var(--color-text); }
+
+        /* ============================================================
+           MAP
+        ============================================================ */
+        #map { height: 100vh; width: 100%; }
+
+        /* ============================================================
+           PANEL
+        ============================================================ */
+        .panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: var(--panel-width);
+            max-height: 92vh;
+            overflow-y: auto;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            z-index: 1000;
+        }
+        .panel::-webkit-scrollbar { width: 4px; }
+        .panel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+
+        /* ============================================================
+           TYPOGRAPHY
+        ============================================================ */
+        .panel-title    { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+        .panel-subtitle { font-size: 0.78rem; color: var(--color-muted); margin-top: 2px; margin-bottom: 20px; }
+        .section-label  { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-bottom: 10px; }
+
+        /* ============================================================
+           DIVIDER
+        ============================================================ */
+        .divider { height: 1px; background: var(--color-border); margin: 18px 0; }
+
+        /* ============================================================
+           LOCATION CHIP
+        ============================================================ */
+        #coords {
+            font-size: 0.8rem;
+            color: var(--color-muted);
+            background: var(--color-surface);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+
+        /* ============================================================
+           FORM INPUTS
+        ============================================================ */
+        .field { margin-bottom: 14px; }
+        .field label { font-size: 0.75rem; color: var(--color-muted); display: block; margin-bottom: 4px; }
+        .field input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            color: var(--color-text);
+            background: var(--color-bg);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .field input:focus { border-color: var(--color-accent); }
+
+        /* ============================================================
+           BUTTON
+        ============================================================ */
+        .btn-primary {
+            width: 100%;
+            padding: 11px;
+            background: var(--color-accent);
+            color: var(--color-accent-fg);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-primary:hover { opacity: 0.85; }
+
+        /* ============================================================
+           STATUS MESSAGES
+        ============================================================ */
+        .msg { font-size: 0.78rem; margin-top: 12px; }
+        #loading { display: none; color: var(--color-muted); }
+        #error   { display: none; color: #c0392b; }
+
+        /* ============================================================
+           RESULTS
+        ============================================================ */
+        #result { display: none; }
+
+        /* Rating */
+        .rating-box {
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+        .rating-value  { font-size: 1rem; font-weight: 700; color: var(--color-text); }
+        .rating-detail { font-size: 0.72rem; color: var(--color-muted); margin-top: 2px; }
+
+        /* Metric cards */
+        .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .card  { background: var(--color-surface); border-radius: var(--radius-md); padding: 12px; }
+        .card .value { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+        .card .label { font-size: 0.68rem; color: var(--color-muted); margin-top: 3px; }
+
+        /* Savings */
+        .savings-box {
+            background: var(--color-surface);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+        .savings-amount { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
+        .savings-label  { font-size: 0.72rem; color: var(--color-muted); margin-top: 2px; }
+
+        /* Advice */
+        .advice-box {
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        .advice-good { background: var(--color-good-bg); color: var(--color-good); }
+        .advice-warn { background: var(--color-warn-bg); color: var(--color-warn); }
+
+        /* Footer */
+        .footer { font-size: 0.68rem; color: var(--color-muted); text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+
+    <!-- Header -->
+    <div class="panel-title">SatSolar</div>
+    <div class="panel-subtitle">Click on the map to select a location</div>
+
+    <!-- Location -->
+    <div id="coords">No location selected</div>
+
+    <!-- Inputs -->
+    <div class="field">
+        <label>Hour of day (0 = midnight, 12 = noon)</label>
+        <input type="number" id="hour" min="0" max="23" value="12"/>
+    </div>
+
+    <div class="field">
+        <label>Ambient temperature (°C)</label>
+        <input type="number" id="temperature" value="30"/>
+    </div>
+
+    <button class="btn-primary" onclick="getPrediction()">Predict Solar Output</button>
+
+    <div class="msg" id="loading">Fetching satellite data and running model...</div>
+    <div class="msg" id="error"></div>
+
+    <!-- Results -->
+    <div id="result">
+        <div class="divider"></div>
+        <div class="section-label">Results</div>
+
+        <!-- Rating -->
+        <div class="rating-box">
+            <div class="rating-value" id="rating-text"></div>
+            <div class="rating-detail">Solar potential at selected location</div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="cards">
+            <div class="card">
+                <div class="value" id="irradiance"></div>
+                <div class="label">Irradiance (W/m²)</div>
+            </div>
+            <div class="card">
+                <div class="value" id="peak_power"></div>
+                <div class="label">Peak Power (kW)</div>
+            </div>
+            <div class="card">
+                <div class="value" id="daily_kwh"></div>
+                <div class="label">Daily Energy (kWh)</div>
+            </div>
+            <div class="card">
+                <div class="value" id="monthly_kwh"></div>
+                <div class="label">Monthly Energy (kWh)</div>
+            </div>
+        </div>
+
+        <!-- Savings -->
+        <div class="savings-box">
+            <div class="savings-amount" id="savings"></div>
+            <div class="savings-label">Estimated monthly bill savings — 5 kW rooftop system</div>
+        </div>
+
+        <!-- Advice -->
+        <div class="advice-box" id="advice-box">
+            <span id="advice-text"></span>
+        </div>
+    </div>
+
+    <div class="footer">Powered by NASA POWER satellite data</div>
+</div>
+
+<script>
+    /* ============================================================
+       CONFIG — change API URL here if backend changes
+    ============================================================ */
+    const API = "https://satsolar.onrender.com";
+
+    /* ============================================================
+       MAP SETUP
+    ============================================================ */
+    let selectedLat = null;
+    let selectedLng = null;
+
+    const map = L.map('map').setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+    map.on('click', function(e) {
+        selectedLat = e.latlng.lat.toFixed(4);
+        selectedLng = e.latlng.lng.toFixed(4);
+        document.getElementById('coords').textContent =
+            `${selectedLat} N,  ${selectedLng} E`;
+        if (marker) map.removeLayer(marker);
+        marker = L.marker([selectedLat, selectedLng]).addTo(map);
+    });
+
+    /* ============================================================
+       PREDICTION
+    ============================================================ */
+    async function getPrediction() {
+        if (!selectedLat || !selectedLng) {
+            alert("Please click on the map to select a location first.");
+            return;
+        }
+
+        const hour        = parseInt(document.getElementById('hour').value);
+        const temperature = parseFloat(document.getElementById('temperature').value);
+
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('result').style.display  = 'none';
+        document.getElementById('error').style.display   = 'none';
+
+        try {
+            const res = await fetch(`${API}/predict`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    latitude:    parseFloat(selectedLat),
+                    longitude:   parseFloat(selectedLng),
+                    hour:        hour,
+                    temperature: temperature
+                })
+            });
+
+            const d = await res.json();
+
+            /* -- populate results -- */
+            document.getElementById('rating-text').textContent  = d.rating_text + ' (' + d.rating + ' / 5)';
+            document.getElementById('irradiance').textContent   = d.irradiance;
+            document.getElementById('peak_power').textContent   = d.peak_power_kw;
+            document.getElementById('daily_kwh').textContent    = d.daily_kwh;
+            document.getElementById('monthly_kwh').textContent  = d.monthly_kwh;
+            document.getElementById('savings').textContent      = 'Rs. ' + d.monthly_savings.toLocaleString();
+
+            const adviceBox  = document.getElementById('advice-box');
+            const adviceText = document.getElementById('advice-text');
+            adviceText.textContent  = d.advice;
+            adviceBox.className     = 'advice-box ' + (d.should_install ? 'advice-good' : 'advice-warn');
+
+            document.getElementById('result').style.display = 'block';
+
+        } catch (err) {
+            document.getElementById('error').style.display  = 'block';
+            document.getElementById('error').textContent    = 'Request failed. Please try again.';
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>

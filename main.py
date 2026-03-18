@@ -13,6 +13,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# cache trained models by location
+model_cache = {}
+
 class PredictRequest(BaseModel):
     latitude: float
     longitude: float
@@ -25,10 +28,17 @@ def root():
 
 @app.post("/predict")
 def get_prediction(req: PredictRequest):
+    # round to 1 decimal to reuse nearby locations
+    cache_key = (round(req.latitude, 1), round(req.longitude, 1))
+
+    if cache_key not in model_cache:
+        model_cache[cache_key] = fetch_and_train(req.latitude, req.longitude)
+
+    model = model_cache[cache_key]
+
     now = datetime.datetime.now()
-    month = now.month
+    month      = now.month
     day_of_year = now.timetuple().tm_yday
 
-    model = fetch_and_train(req.latitude, req.longitude)
     result = predict(model, month, req.hour, day_of_year, req.temperature)
     return result
