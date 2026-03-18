@@ -13,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# cache trained models by location
 model_cache = {}
 
 class PredictRequest(BaseModel):
@@ -26,9 +25,13 @@ class PredictRequest(BaseModel):
 def root():
     return {"status": "SatSolar API is running!"}
 
+@app.get("/clear-cache")
+def clear_cache():
+    model_cache.clear()
+    return {"status": "cache cleared"}
+
 @app.post("/predict")
 def get_prediction(req: PredictRequest):
-    # round to 1 decimal to reuse nearby locations
     cache_key = (round(req.latitude, 1), round(req.longitude, 1))
 
     if cache_key not in model_cache:
@@ -37,7 +40,7 @@ def get_prediction(req: PredictRequest):
     model = model_cache[cache_key]
 
     now = datetime.datetime.now()
-    month      = now.month
+    month       = now.month
     day_of_year = now.timetuple().tm_yday
 
     result = predict(model, month, req.hour, day_of_year, req.temperature)
